@@ -25,11 +25,7 @@ def main(args):
   #Setting needed parameters
   os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu_id)
 
-  if args.num_obs:
-      num_obs = args.num_obs
-  else:
-      num_obs = 100000
-
+  num_obs = args.num_obs if args.num_obs else 100000
   if args.use_cpu == 1:
       config['device'] = 'cpu'
   else:
@@ -88,11 +84,7 @@ def main(args):
   # Evaluate predictions
   print(15*'=', ' Final evaluation ', 14*'=')
   seasonality = config['data_parameters']['seasonality']
-  if not seasonality:
-      seasonality = 1
-  else:
-      seasonality = seasonality[0]
-
+  seasonality = 1 if not seasonality else seasonality[0]
   final_owa, final_mase, final_smape = evaluate_prediction_owa(y_hat_df, y_train_df,
                                                                X_test_df, y_test_df,
                                                                naive2_seasonality=seasonality)

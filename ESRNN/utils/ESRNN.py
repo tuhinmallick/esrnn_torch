@@ -12,7 +12,7 @@ class _ES(nn.Module):
     self.mc = mc
     self.n_series = self.mc.n_series
     self.output_size = self.mc.output_size
-    assert len(self.mc.seasonality) in [0, 1, 2]
+    assert len(self.mc.seasonality) in {0, 1, 2}
 
   def gaussian_noise(self, input_data, std=0.2):
     size = input_data.size()
@@ -285,5 +285,4 @@ class _ESRNN(nn.Module):
     windows_y_hat = self.rnn(windows_y_hat)
     trend = windows_y_hat[-1,:,:] # Last observation prediction
 
-    y_hat = self.es.predict(trend, levels, seasonalities)
-    return y_hat
+    return self.es.predict(trend, levels, seasonalities)

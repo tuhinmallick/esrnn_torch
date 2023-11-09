@@ -181,8 +181,8 @@ class ESRNNensemble(object):
     # Transform long dfs to wide numpy
     assert type(X_df) == pd.core.frame.DataFrame
     assert type(y_df) == pd.core.frame.DataFrame
-    assert all([(col in X_df) for col in ['unique_id', 'ds', 'x']])
-    assert all([(col in y_df) for col in ['unique_id', 'ds', 'y']])
+    assert all(col in X_df for col in ['unique_id', 'ds', 'x'])
+    assert all(col in y_df for col in ['unique_id', 'ds', 'y'])
 
     # Storing dfs for OWA evaluation, initializing min_owa
     self.y_train_df = y_df
@@ -193,7 +193,10 @@ class ESRNNensemble(object):
 
     # Exogenous variables
     unique_categories = X_df['x'].unique()
-    self.mc.category_to_idx = dict((word, index) for index, word in enumerate(unique_categories))
+    self.mc.category_to_idx = {
+        word: index
+        for index, word in enumerate(unique_categories)
+    }
     self.mc.exogenous_size = len(unique_categories)
 
     self.unique_ids = X_df['unique_id'].unique()
@@ -292,8 +295,8 @@ class ESRNNensemble(object):
 
       warm_start = True
 
-      print("========= Epoch {} finished =========".format(epoch))
-      print("Training time: {}".format(round(time.time()-start, 5)))
+      print(f"========= Epoch {epoch} finished =========")
+      print(f"Training time: {round(time.time() - start, 5)}")
       self.train_loss = np.einsum('ij,ij->i',self.performance_matrix, self.series_models_map)/self.n_top
       self.train_loss = np.mean(self.train_loss)
       print("Training loss ({} prc): {:.5f}".format(self.mc.training_percentile,
@@ -345,7 +348,7 @@ class ESRNNensemble(object):
 
       # Predict ALL series
       count = 0
-      for j in range(dataloader.n_batches):
+      for _ in range(dataloader.n_batches):
         batch = dataloader.get_batch()
         batch_size = batch.y.shape[0]
 
@@ -429,8 +432,8 @@ class ESRNNensemble(object):
       if epoch is not None:
         self.min_epoch = epoch
 
-    print('OWA: {} '.format(np.round(model_owa, 3)))
-    print('SMAPE: {} '.format(np.round(model_smape, 3)))
-    print('MASE: {} '.format(np.round(model_mase, 3)))
+    print(f'OWA: {np.round(model_owa, 3)} ')
+    print(f'SMAPE: {np.round(model_smape, 3)} ')
+    print(f'MASE: {np.round(model_mase, 3)} ')
 
     return model_owa, model_mase, model_smape
