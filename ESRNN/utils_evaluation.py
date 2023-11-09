@@ -150,8 +150,7 @@ class SeasonalNaive:
 
   def predict(self, h):
     repetitions = int(np.ceil(h/len(self.ts_seasonal_naive)))
-    y_hat = np.tile(self.ts_seasonal_naive, reps=repetitions)[:h]
-    return y_hat
+    return np.tile(self.ts_seasonal_naive, reps=repetitions)[:h]
 
 class Naive2:
   """
@@ -177,9 +176,8 @@ class Naive2:
   def predict(self, h):
     s_hat = SeasonalNaive().fit(self.s_hat,
                                 seasonality=self.seasonality).predict(h)
-    r_hat = Naive().fit(self.ts_des).predict(h)        
-    y_hat = s_hat * r_hat
-    return y_hat
+    r_hat = Naive().fit(self.ts_des).predict(h)
+    return s_hat * r_hat
 
 ########################
 # METRICS
@@ -203,8 +201,7 @@ def mse(y, y_hat):
   """
   y = np.reshape(y, (-1,))
   y_hat = np.reshape(y_hat, (-1,))
-  mse = np.mean(np.square(y - y_hat)).item()
-  return mse
+  return np.mean(np.square(y - y_hat)).item()
 
 def mape(y, y_hat):
   """
@@ -224,8 +221,7 @@ def mape(y, y_hat):
   """
   y = np.reshape(y, (-1,))
   y_hat = np.reshape(y_hat, (-1,))
-  mape = np.mean(np.abs(y - y_hat) / np.abs(y))
-  return mape
+  return np.mean(np.abs(y - y_hat) / np.abs(y))
 
 def smape(y, y_hat):
   """
@@ -245,8 +241,7 @@ def smape(y, y_hat):
   """
   y = np.reshape(y, (-1,))
   y_hat = np.reshape(y_hat, (-1,))
-  smape = np.mean(2.0 * np.abs(y - y_hat) / (np.abs(y) + np.abs(y_hat)))
-  return smape
+  return np.mean(2.0 * np.abs(y - y_hat) / (np.abs(y) + np.abs(y_hat)))
 
 def mase(y, y_hat, y_train, seasonality):
   """
@@ -269,13 +264,11 @@ def mase(y, y_hat, y_train, seasonality):
   mase: float
     mean absolute scaled error
   """
-  y_hat_naive = []
-  for i in range(seasonality, len(y_train)):
-      y_hat_naive.append(y_train[(i - seasonality)])
-
+  y_hat_naive = [
+      y_train[(i - seasonality)] for i in range(seasonality, len(y_train))
+  ]
   masep = np.mean(abs(y_train[seasonality:] - y_hat_naive))
-  mase = np.mean(abs(y - y_hat)) / masep
-  return mase
+  return np.mean(abs(y - y_hat)) / masep
 
 ########################
 # PANEL EVALUATION
@@ -369,7 +362,7 @@ def owa(y_panel, y_hat_panel, y_naive2_panel, y_insample, seasonality):
 
 def evaluate_prediction_owa(y_hat_df, y_train_df, X_test_df, y_test_df, 
                             naive2_seasonality):
-    """
+  """
     y_hat_df: pandas df
       panel with columns unique_id, ds, y_hat
     y_train_df: pandas df
@@ -383,18 +376,18 @@ def evaluate_prediction_owa(y_hat_df, y_train_df, X_test_df, y_test_df,
     model: python class
       python class with predict method
     """
-    y_panel = y_test_df.filter(['unique_id', 'ds', 'y'])
-    y_naive2_panel = y_test_df.filter(['unique_id', 'ds', 'y_hat_naive2'])
-    y_naive2_panel.rename(columns={'y_hat_naive2': 'y_hat'}, inplace=True)
-    y_hat_panel = y_hat_df
-    y_insample = y_train_df.filter(['unique_id', 'ds', 'y'])
+  y_panel = y_test_df.filter(['unique_id', 'ds', 'y'])
+  y_naive2_panel = y_test_df.filter(['unique_id', 'ds', 'y_hat_naive2'])
+  y_naive2_panel.rename(columns={'y_hat_naive2': 'y_hat'}, inplace=True)
+  y_hat_panel = y_hat_df
+  y_insample = y_train_df.filter(['unique_id', 'ds', 'y'])
 
-    model_owa, model_mase, model_smape = owa(y_panel, y_hat_panel, 
-                                             y_naive2_panel, y_insample,
-                                             seasonality=naive2_seasonality)
+  model_owa, model_mase, model_smape = owa(y_panel, y_hat_panel, 
+                                           y_naive2_panel, y_insample,
+                                           seasonality=naive2_seasonality)
 
-    print(15*'=', ' Model evaluation ', 14*'=')
-    print('OWA: {} '.format(np.round(model_owa, 3)))
-    print('SMAPE: {} '.format(np.round(model_smape, 3)))
-    print('MASE: {} '.format(np.round(model_mase, 3)))
-    return model_owa, model_mase, model_smape
+  print(15*'=', ' Model evaluation ', 14*'=')
+  print(f'OWA: {np.round(model_owa, 3)} ')
+  print(f'SMAPE: {np.round(model_smape, 3)} ')
+  print(f'MASE: {np.round(model_mase, 3)} ')
+  return model_owa, model_mase, model_smape

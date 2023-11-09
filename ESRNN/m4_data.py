@@ -75,7 +75,7 @@ def m4_parser(dataset_name, directory, num_obs=1000000):
   m4_info = m4_info[m4_info['M4id'].str.startswith(dataset_name[0])].reset_index(drop=True)
 
   # Train data
-  train_path='{}{}-train.csv'.format(train_directory, dataset_name)
+  train_path = f'{train_directory}{dataset_name}-train.csv'
 
   train_df = pd.read_csv(train_path, nrows=num_obs)
   train_df = train_df.rename(columns={'V1':'unique_id'})
@@ -90,7 +90,7 @@ def m4_parser(dataset_name, directory, num_obs=1000000):
   len_series.columns = ['unique_id', 'len_serie']
 
   # Test data
-  test_path='{}{}-test.csv'.format(test_directory, dataset_name)
+  test_path = f'{test_directory}{dataset_name}-test.csv'
 
   test_df = pd.read_csv(test_path, nrows=num_obs)
   test_df = test_df.rename(columns={'V1':'unique_id'})
@@ -132,7 +132,7 @@ def m4_parser(dataset_name, directory, num_obs=1000000):
   return X_train_df, y_train_df, X_test_df, y_test_df
 
 def naive2_predictions(dataset_name, directory, num_obs, y_train_df = None, y_test_df = None):
-    """
+  """
     Computes Naive2 predictions.
 
     Parameters
@@ -148,47 +148,47 @@ def naive2_predictions(dataset_name, directory, num_obs, y_train_df = None, y_te
     y_test_df: DataFrame
       Y test set returned by m4_parser
     """
-    # Read train and test data
-    if (y_train_df is None) or (y_test_df is None):
-        _, y_train_df, _, y_test_df = m4_parser(dataset_name, directory, num_obs)
+  # Read train and test data
+  if (y_train_df is None) or (y_test_df is None):
+      _, y_train_df, _, y_test_df = m4_parser(dataset_name, directory, num_obs)
 
-    seasonality = seas_dict[dataset_name]['seasonality']
-    input_size = seas_dict[dataset_name]['input_size']
-    output_size = seas_dict[dataset_name]['output_size']
-    freq = seas_dict[dataset_name]['freq']
+  seasonality = seas_dict[dataset_name]['seasonality']
+  input_size = seas_dict[dataset_name]['input_size']
+  output_size = seas_dict[dataset_name]['output_size']
+  freq = seas_dict[dataset_name]['freq']
 
-    print('Preparing {} dataset'.format(dataset_name))
-    print('Preparing Naive2 {} dataset predictions'.format(dataset_name))
+  print(f'Preparing {dataset_name} dataset')
+  print(f'Preparing Naive2 {dataset_name} dataset predictions')
 
-    # Naive2
-    y_naive2_df = pd.DataFrame(columns=['unique_id', 'ds', 'y_hat'])
+  # Naive2
+  y_naive2_df = pd.DataFrame(columns=['unique_id', 'ds', 'y_hat'])
 
-    # Sort X by unique_id for faster loop
-    y_train_df = y_train_df.sort_values(by=['unique_id', 'ds'])
-    # List of uniques ids
-    unique_ids = y_train_df['unique_id'].unique()
-    # Panel of fitted models
-    for unique_id in unique_ids:
-        # Fast filter X and y by id.
-        top_row = np.asscalar(y_train_df['unique_id'].searchsorted(unique_id, 'left'))
-        bottom_row = np.asscalar(y_train_df['unique_id'].searchsorted(unique_id, 'right'))
-        y_id = y_train_df[top_row:bottom_row]
+  # Sort X by unique_id for faster loop
+  y_train_df = y_train_df.sort_values(by=['unique_id', 'ds'])
+  # List of uniques ids
+  unique_ids = y_train_df['unique_id'].unique()
+  # Panel of fitted models
+  for unique_id in unique_ids:
+      # Fast filter X and y by id.
+      top_row = np.asscalar(y_train_df['unique_id'].searchsorted(unique_id, 'left'))
+      bottom_row = np.asscalar(y_train_df['unique_id'].searchsorted(unique_id, 'right'))
+      y_id = y_train_df[top_row:bottom_row]
 
-        y_naive2 = pd.DataFrame(columns=['unique_id', 'ds', 'y_hat'])
-        y_naive2['ds'] = pd.date_range(start=y_id.ds.max(),
-                                       periods=output_size+1, freq=freq)[1:]
-        y_naive2['unique_id'] = unique_id
-        y_naive2['y_hat'] = Naive2(seasonality).fit(y_id.y.to_numpy()).predict(output_size)
-        y_naive2_df = y_naive2_df.append(y_naive2)
+      y_naive2 = pd.DataFrame(columns=['unique_id', 'ds', 'y_hat'])
+      y_naive2['ds'] = pd.date_range(start=y_id.ds.max(),
+                                     periods=output_size+1, freq=freq)[1:]
+      y_naive2['unique_id'] = unique_id
+      y_naive2['y_hat'] = Naive2(seasonality).fit(y_id.y.to_numpy()).predict(output_size)
+      y_naive2_df = y_naive2_df.append(y_naive2)
 
-    y_naive2_df = y_test_df.merge(y_naive2_df, on=['unique_id', 'ds'], how='left')
-    y_naive2_df.rename(columns={'y_hat': 'y_hat_naive2'}, inplace=True)
+  y_naive2_df = y_test_df.merge(y_naive2_df, on=['unique_id', 'ds'], how='left')
+  y_naive2_df.rename(columns={'y_hat': 'y_hat_naive2'}, inplace=True)
 
-    results_dir = directory + '/results'
-    naive2_file = results_dir + '/{}-naive2predictions_{}.csv'.format(dataset_name, num_obs)
-    y_naive2_df.to_csv(naive2_file, encoding='utf-8', index=None)
+  results_dir = directory + '/results'
+  naive2_file = results_dir + f'/{dataset_name}-naive2predictions_{num_obs}.csv'
+  y_naive2_df.to_csv(naive2_file, encoding='utf-8', index=None)
 
-    return y_naive2_df
+  return y_naive2_df
 
 def prepare_m4_data(dataset_name, directory, num_obs):
   """

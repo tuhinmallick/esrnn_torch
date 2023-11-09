@@ -86,16 +86,13 @@ def plot_distributions(distributions_dict, fig_title=None, xlabel=None):
   fig.tight_layout()
   if fig_title is not None:
     fig_title = fig_title.replace(' ', '_')
-    plot_file = "./results/plots/{}_distributions.png".format(fig_title)
+    plot_file = f"./results/plots/{fig_title}_distributions.png"
     plt.savefig(plot_file, bbox_inches = "tight", dpi=300)
   plt.show()
 
 def plot_cat_distributions(df, cat, var):
   unique_cats = df[cat].unique()
-  cat_dict = {}
-  for c in unique_cats:
-      cat_dict[c] = df[df[cat]==c][var].values
-
+  cat_dict = {c: df[df[cat]==c][var].values for c in unique_cats}
   plot_distributions(cat_dict, xlabel=var)
 
 def plot_single_cat_distributions(distributions_dict, ax, fig_title=None, xlabel=None):

@@ -194,7 +194,7 @@ class ESRNN(object):
       if shuffle:
         dataloader.shuffle_dataset(random_seed=epoch)
       losses = []
-      for j in range(dataloader.n_batches):
+      for _ in range(dataloader.n_batches):
         self.es_optimizer.zero_grad()
         self.rnn_optimizer.zero_grad()
 
@@ -229,8 +229,8 @@ class ESRNN(object):
       # Evaluation
       self.train_loss = np.mean(losses)
       if verbose:
-        print("========= Epoch {} finished =========".format(epoch))
-        print("Training time: {}".format(round(time.time()-start, 5)))
+        print(f"========= Epoch {epoch} finished =========")
+        print(f"Training time: {round(time.time() - start, 5)}")
         print("Training loss ({} prc): {:.5f}".format(self.mc.training_percentile,
                                                       self.train_loss))
 
@@ -258,12 +258,11 @@ class ESRNN(object):
 
     with torch.no_grad():
       # Create fast dataloader
-      if self.mc.n_series < self.mc.batch_size_test: new_batch_size = self.mc.n_series
-      else: new_batch_size = self.mc.batch_size_test
+      new_batch_size = min(self.mc.n_series, self.mc.batch_size_test)
       dataloader.update_batch_size(new_batch_size)
 
       per_series_losses = []
-      for j in range(dataloader.n_batches):
+      for _ in range(dataloader.n_batches):
         batch = dataloader.get_batch()
         windows_y, windows_y_hat, _ = self.esrnn(batch)
         loss = criterion(windows_y, windows_y_hat)
@@ -290,12 +289,11 @@ class ESRNN(object):
 
     with torch.no_grad():
       # Create fast dataloader
-      if self.mc.n_series < self.mc.batch_size_test: new_batch_size = self.mc.n_series
-      else: new_batch_size = self.mc.batch_size_test
+      new_batch_size = min(self.mc.n_series, self.mc.batch_size_test)
       dataloader.update_batch_size(new_batch_size)
 
       model_loss = 0.0
-      for j in range(dataloader.n_batches):
+      for _ in range(dataloader.n_batches):
         batch = dataloader.get_batch()
         windows_y, windows_y_hat, _ = self.esrnn(batch)
         loss = criterion(windows_y, windows_y_hat)
@@ -351,9 +349,9 @@ class ESRNN(object):
       if epoch is not None:
         self.min_epoch = epoch
 
-    print('OWA: {} '.format(np.round(model_owa, 3)))
-    print('SMAPE: {} '.format(np.round(model_smape, 3)))
-    print('MASE: {} '.format(np.round(model_mase, 3)))
+    print(f'OWA: {np.round(model_owa, 3)} ')
+    print(f'SMAPE: {np.round(model_smape, 3)} ')
+    print(f'MASE: {np.round(model_mase, 3)} ')
 
     return model_owa, model_mase, model_smape
 
@@ -396,8 +394,8 @@ class ESRNN(object):
     # Transform long dfs to wide numpy
     assert type(X_df) == pd.core.frame.DataFrame
     assert type(y_df) == pd.core.frame.DataFrame
-    assert all([(col in X_df) for col in ['unique_id', 'ds', 'x']])
-    assert all([(col in y_df) for col in ['unique_id', 'ds', 'y']])
+    assert all(col in X_df for col in ['unique_id', 'ds', 'x'])
+    assert all(col in y_df for col in ['unique_id', 'ds', 'y'])
     if y_test_df is not None:
         assert y_hat_benchmark in y_test_df.columns, 'benchmark is not present in y_test_df, use y_hat_benchmark to define it'
 
@@ -418,7 +416,10 @@ class ESRNN(object):
 
     # Exogenous variables
     unique_categories = np.unique(X[:, 1])
-    self.mc.category_to_idx = dict((word, index) for index, word in enumerate(unique_categories))
+    self.mc.category_to_idx = {
+        word: index
+        for index, word in enumerate(unique_categories)
+    }
     exogenous_size = len(unique_categories)
 
     # Create batches (device in mc)
@@ -441,12 +442,12 @@ class ESRNN(object):
         X_test_frequency = pd.infer_freq(X_test_df.head()['ds'])
         y_test_frequency = pd.infer_freq(y_test_df.head()['ds'])
         self.frequencies += [X_test_frequency, y_test_frequency]
-    
-    assert len(set(self.frequencies)) <= 1, \
-      "Match the frequencies of the dataframes {}".format(self.frequencies)
+
+    assert (len(set(self.frequencies)) <=
+            1), f"Match the frequencies of the dataframes {self.frequencies}"
 
     self.mc.frequency = self.frequencies[0]
-    print("Infered frequency: {}".format(self.mc.frequency))
+    print(f"Infered frequency: {self.mc.frequency}")
 
     # Train model
     self._fitted = True
@@ -491,8 +492,7 @@ class ESRNN(object):
     self.esrnn.eval()
 
     # Create fast dataloader
-    if self.mc.n_series < self.mc.batch_size_test: new_batch_size = self.mc.n_series
-    else: new_batch_size = self.mc.batch_size_test
+    new_batch_size = min(self.mc.n_series, self.mc.batch_size_test)
     self.train_dataloader.update_batch_size(new_batch_size)
     dataloader = self.train_dataloader
 
@@ -512,7 +512,7 @@ class ESRNN(object):
 
     # Predict
     count = 0
-    for j in range(dataloader.n_batches):
+    for _ in range(dataloader.n_batches):
       batch = dataloader.get_batch()
       batch_size = batch.y.shape[0]
 
@@ -572,9 +572,7 @@ class ESRNN(object):
     data = X_df.copy()
     data['y'] = y_df['y'].copy()
     sorted_ds = np.sort(data['ds'].unique())
-    ds_map = {}
-    for dmap, t in enumerate(sorted_ds):
-        ds_map[t] = dmap
+    ds_map = {t: dmap for dmap, t in enumerate(sorted_ds)}
     data['ds_map'] = data['ds'].map(ds_map)
     data = data.sort_values(by=['ds_map','unique_id'])
     df_wide = data.pivot(index='unique_id', columns='ds_map')['y']
@@ -600,9 +598,8 @@ class ESRNN(object):
 
     data_dir = self.mc.dataset_name
     model_parent_dir = os.path.join(root_dir, data_dir)
-    model_path = ['esrnn_{}'.format(str(self.mc.copy))]
-    model_dir = os.path.join(model_parent_dir, '_'.join(model_path))
-    return model_dir
+    model_path = [f'esrnn_{str(self.mc.copy)}']
+    return os.path.join(model_parent_dir, '_'.join(model_path))
 
   def save(self, model_dir=None, copy=None):
     """Auxiliary function to save ESRNN model"""
@@ -619,7 +616,7 @@ class ESRNN(object):
     rnn_filepath = os.path.join(model_dir, "rnn.model")
     es_filepath = os.path.join(model_dir, "es.model")
 
-    print('Saving model to:\n {}'.format(model_dir)+'\n')
+    print(f'Saving model to:\n {model_dir}' + '\n')
     torch.save({'model_state_dict': self.es.state_dict()}, es_filepath)
     torch.save({'model_state_dict': self.rnn.state_dict()}, rnn_filepath)
 
@@ -637,7 +634,7 @@ class ESRNN(object):
     path = Path(es_filepath)
 
     if path.is_file():
-      print('Loading model from:\n {}'.format(model_dir)+'\n')
+      print(f'Loading model from:\n {model_dir}' + '\n')
 
       checkpoint = torch.load(es_filepath, map_location=self.mc.device)
       self.es.load_state_dict(checkpoint['model_state_dict'])
@@ -647,4 +644,4 @@ class ESRNN(object):
       self.rnn.load_state_dict(checkpoint['model_state_dict'])
       self.rnn.to(self.mc.device)
     else:
-      print('Model path {} does not exist'.format(path))
+      print(f'Model path {path} does not exist')

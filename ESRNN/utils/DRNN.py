@@ -122,24 +122,24 @@ class AttentiveLSTMLayer(nn.Module):
 
     #@jit.script_method
     def forward(self, input, hidden):
-      inputs = input.unbind(0)
-      #outputs = torch.jit.annotate(List[Tensor], [])
-      outputs = []
+        inputs = input.unbind(0)
+        #outputs = torch.jit.annotate(List[Tensor], [])
+        outputs = []
 
-      for t in range(len(input)):
-          # attention on windows
-          hx, cx = hidden[0].squeeze(0), hidden[1].squeeze(0)
-          hx_rep = hx.repeat(len(inputs), 1, 1)
-          cx_rep = cx.repeat(len(inputs), 1, 1)
-          x = torch.cat((input, hx_rep, cx_rep), dim=-1)
-          l = self.attn_layer(x)
-          beta = self.softmax(l)
-          context = torch.bmm(beta.permute(1, 2, 0), 
-                              input.permute(1, 0, 2)).squeeze(1)
-          out, hidden = self.cell(context, hidden)
-          outputs += [out]
-      outputs = torch.stack(outputs)
-      return outputs, hidden
+        for _ in range(len(input)):
+            # attention on windows
+            hx, cx = hidden[0].squeeze(0), hidden[1].squeeze(0)
+            hx_rep = hx.repeat(len(inputs), 1, 1)
+            cx_rep = cx.repeat(len(inputs), 1, 1)
+            x = torch.cat((input, hx_rep, cx_rep), dim=-1)
+            l = self.attn_layer(x)
+            beta = self.softmax(l)
+            context = torch.bmm(beta.permute(1, 2, 0), 
+                                input.permute(1, 0, 2)).squeeze(1)
+            out, hidden = self.cell(context, hidden)
+            outputs += [out]
+        outputs = torch.stack(outputs)
+        return outputs, hidden
 
 
 class DRNN(nn.Module):
@@ -213,14 +213,14 @@ class DRNN(nn.Module):
 
     def _apply_cell(self, dilated_inputs, cell, batch_size, rate, hidden_size, hidden=None):
         if hidden is None:
-            if self.cell_type == 'LSTM' or self.cell_type == 'ResLSTM' or self.cell_type == 'AttentiveLSTM':
+            if self.cell_type in ['LSTM', 'ResLSTM', 'AttentiveLSTM']:
                 c, m = self.init_hidden(batch_size * rate, hidden_size)
                 hidden = (c.unsqueeze(0), m.unsqueeze(0))
             else:
                 hidden = self.init_hidden(batch_size * rate, hidden_size).unsqueeze(0)
 
         dilated_outputs, hidden = cell(dilated_inputs, hidden) # compatibility hack
-        
+
         return dilated_outputs, hidden
 
     def _unpad_outputs(self, splitted_outputs, n_steps):
@@ -256,20 +256,18 @@ class DRNN(nn.Module):
         return inputs, dilated_steps
 
     def _prepare_inputs(self, inputs, rate):
-        dilated_inputs = torch.cat([inputs[j::rate, :, :] for j in range(rate)], 1)
-        return dilated_inputs
+        return torch.cat([inputs[j::rate, :, :] for j in range(rate)], 1)
 
     def init_hidden(self, batch_size, hidden_dim):
         hidden = autograd.Variable(torch.zeros(batch_size, hidden_dim))
         if use_cuda:
             hidden = hidden.cuda()
-        if self.cell_type == "LSTM" or self.cell_type == 'ResLSTM' or self.cell_type == 'AttentiveLSTM':
-            memory = autograd.Variable(torch.zeros(batch_size, hidden_dim))
-            if use_cuda:
-                memory = memory.cuda()
-            return hidden, memory
-        else:
+        if self.cell_type not in ["LSTM", 'ResLSTM', 'AttentiveLSTM']:
             return hidden
+        memory = autograd.Variable(torch.zeros(batch_size, hidden_dim))
+        if use_cuda:
+            memory = memory.cuda()
+        return hidden, memory
 
 
 if __name__ == '__main__':

@@ -101,7 +101,7 @@ class Iterator(object):
                      'sort_key': [old_sort_key[i] for i in shuffle]}
 
   def get_trim_batch(self, unique_id):
-    if unique_id==None:
+    if unique_id is None:
       # Compute the indexes of the minibatch.
       first = (self.b * self.batch_size)
       last = min((first + self.batch_size), self.n_series)
@@ -129,8 +129,8 @@ class Iterator(object):
       y_b[i] = batch_y[i,(last_numeric[i]-min_len):last_numeric[i]]
     batch_y = y_b
 
-    assert not np.isnan(batch_y).any(), \
-           "clean np.nan's from unique_idxs: {}".format(unique_idxs)
+    assert not np.isnan(
+        batch_y).any(), f"clean np.nan's from unique_idxs: {unique_idxs}"
     assert batch_y.shape[0]==len(batch_idxs)==len(batch_last_ds)==len(batch_categories)
     assert batch_y.shape[1]>=1
 
